@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { connectDB } from "./libs/db.js";
 import authRoute from "./routes/authRoute.js";
 import cookieParser from "cookie-parser";
+import { protectedRoute } from "./middlewares/authMiddleware.js";
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(cookieParser());
 app.use("/api/auth", authRoute);
 
 //private route
+app.use(protectedRoute);
 
 //connect db
 connectDB().then(() => {
