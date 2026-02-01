@@ -1,8 +1,9 @@
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import { Session } from "../models/Session.js";
+import crypto, { sign } from "crypto";
+import Session from "../models/Session.js";
+import { response } from "express";
 
 const ACCESS_TOKEN_TTL = "30m";
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000;
@@ -74,9 +75,67 @@ export const signIn = async (request, response) => {
       expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL),
     });
 
-    return response.status(200).json(`User ${username} is signed in `);
+    response.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      samSite: "none",
+      maxAge: REFRESH_TOKEN_TTL,
+    });
+    return response
+      .status(200)
+      .json({ message: `User ${user.displayName} is signed in `, accessToken });
   } catch (error) {
     console.error("Failed to sign in", error);
+    return response.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const signOut = async (request, response) => {
+  try {
+    const token = request.cookies?.refreshToken;
+
+    if (token) {
+      await Session.deleteOne({ refreshToken: token });
+
+      response.clearCookie("refreshToken");
+    }
+
+    return response.sendStatus(204);
+  } catch (error) {
+    console.error("Failed to sign out", error);
+    return response.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const refreshToken = async (request, response) => {
+  try {
+    const token = request.cookies?.refreshToken;
+
+    if (!token) {
+      return response.status(401).json({ message: "Token not found" });
+    }
+
+    const session = Session.findOne({ refreshToken: token });
+
+    if (!session) {
+      return response
+        .status(401)
+        .json({ message: "Token is invalid or has expired" });
+    }
+
+    if (session.expiresAt < new Date()) {
+      return response.status(401).json({ message: "Token has expired" });
+    }
+
+    const accessToken = jwt.sign(
+      { userId: session.userId },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: ACCESS_TOKEN_TTL },
+    );
+
+    return response.status(200).json({ accessToken });
+  } catch (error) {
+    console.error("Failed to call refresh token", error);
     return response.status(500).json({ message: "Internal Server Error" });
   }
 };
