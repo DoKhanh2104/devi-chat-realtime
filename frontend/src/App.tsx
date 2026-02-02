@@ -3,6 +3,7 @@ import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import ChatApp from "./pages/ChatApp";
 import { Toaster } from "sonner";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   return (
@@ -15,7 +16,9 @@ function App() {
           <Route path="/signin" element={<SignIn />} />
 
           {/* protected route */}
-          <Route path="/" element={<ChatApp />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<ChatApp />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </>

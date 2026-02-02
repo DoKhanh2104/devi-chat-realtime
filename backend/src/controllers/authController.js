@@ -3,7 +3,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto, { sign } from "crypto";
 import Session from "../models/Session.js";
-import { response } from "express";
 
 const ACCESS_TOKEN_TTL = "30m";
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000;
@@ -115,7 +114,7 @@ export const refreshToken = async (request, response) => {
       return response.status(401).json({ message: "Token not found" });
     }
 
-    const session = Session.findOne({ refreshToken: token });
+    const session = await Session.findOne({ refreshToken: token });
 
     if (!session) {
       return response
